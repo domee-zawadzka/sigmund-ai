@@ -13,8 +13,12 @@ function initMain(event) {
     updateCounter();
     
     messageInput.addEventListener('input', function() {
-        // Enable the send button if there are at least 3 characters in the message box
+        // Enable the send button if there are at least 3 characters in the 
+        // message box. This only happens when the need_login variable is not 
+        // True.
+        {% if not need_login %}
         sendButton.disabled = this.value.length < 3;
+        {% endif %}
     });
 
     // Trigger the send button when Enter is pressed inside the message box
@@ -34,7 +38,10 @@ function initMain(event) {
         sendMessage(message);
     });
     initWorkspace();
-    connectWebSocket();
+    // If we're not logged in, this function is not defined.
+    if (typeof connectWebSocket === 'function') {
+        connectWebSocket();
+    }
 }
 
 function generateUUID() {
@@ -52,6 +59,37 @@ async function fetchWithRetry(url, options, retries = 3) {
             if (i === retries - 1) throw err; // if last retry, throw error
         }
     }
+}
+
+function showImageAttachments(message) {
+    const imagePromises = [];
+    attachments.forEach(file => {
+        // Check if the file is an image based on MIME type
+        if (file.type.startsWith('image/')) {
+            // Create a promise to read the image as data URL
+            const promise = new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const dataUrl = e.target.result;
+                    const imgTag = `<div class="image-generation mask"><img src="${dataUrl}"></div>`;
+                    resolve(imgTag);
+                };
+                reader.readAsDataURL(file);
+            });
+            imagePromises.push(promise);
+        }
+    });
+
+    // Wait for all images to be processed and append them to the message
+    Promise.all(imagePromises).then(imageTags => {
+        for (i = 0; i < imageTags.length; i++) {
+            const userMessageBox = document.createElement('div');
+            userMessageBox.innerHTML = imageTags[i];
+            userMessageBox.className = 'message-user message';
+            userMessageBox.setAttribute('data-message-id', generateUUID());
+            responseDiv.appendChild(userMessageBox);
+        }
+    });
 }
 
 async function sendMessage(message) {
@@ -104,6 +142,7 @@ async function sendMessage(message) {
             userMessageBox.appendChild(userWorkspaceDiv);
         }        
     }
+    showImageAttachments();
     // Show the loading indicator and animate it
     const loadingMessageBox = document.createElement('div');
     let baseMessage = "{{ ai_name }} is reading your message ";
@@ -129,14 +168,30 @@ async function sendMessage(message) {
     // Start the chat streaming. We need to do this through a separate endpoint
     // because the user message may be too long to fit into the URL that we use
     // for streaming.
-    await fetchWithRetry('{{ server_url }}/api/chat/start', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: requestBody(message, workspace.getValue(), workspace.getOption('mode'), user_message_id)
-    }).catch(e => {
-        console.error('Failed to start chat session:', e);
+    const formData = new FormData();
+
+    // Append text fields
+    formData.append('message', message);
+    formData.append('workspace_content', workspace.getValue());
+    formData.append('workspace_language', workspace.getOption('mode'));
+    formData.append('message_id', user_message_id);
+
+    // Append attached files
+    attachments.forEach(file => {
+        formData.append('attachments', file);
     });
+
+    try {
+        // Switch out JSON headers for a multipart/form-data request
+        await fetchWithRetry('{{ server_url }}/api/chat/start', {
+            method: 'POST',
+            body: formData
+        });
+    } catch (e) {
+        console.error('Failed to start chat session:', e);
+    }
     function endStream() {
+        clearAttachments();
         clearInterval(messageInterval);
         messageInput.disabled = false;
         sendButton.style.display = 'block';
@@ -146,7 +201,7 @@ async function sendMessage(message) {
     }
     // Now start streaming
     const eventSource = new EventSource('{{ server_url }}/api/chat/stream');
-    eventSource.onmessage = function(event) {
+    eventSource.onmessage = function(event) {        
         console.log(event)
         // Parse the JSON message data
         const data = JSON.parse(event.data);

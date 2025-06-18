@@ -60,7 +60,8 @@ def read_testcases():
 
 
 def score_testcase(description, question, requirements, n=3):
-    sigmund = Sigmund(user_id='pytest')
+    config.search_collections = {'opensesame'}
+    sigmund = Sigmund(user_id='pytest', tools=[])
     validation_model = model(sigmund, 'gpt-4')
     scores = []
     for i in range(n):
@@ -124,6 +125,7 @@ def test_openai():
 
 
 def test_openai_o1():
+    # Not actually o1 anymore
     config.settings_default['model_config'] = 'openai_o1'
     init_testlog()
     selected_case = os.getenv("TEST_CASE")  # Read from environment variable
@@ -133,15 +135,15 @@ def test_openai_o1():
         score_testcases()
 
     
-    
-def test_openai_o3():
-    config.settings_default['model_config'] = 'openai_o3'
-    init_testlog()
-    score_testcases()
-    
 
 def test_mistral():
     config.settings_default['model_config'] = 'mistral'
+    init_testlog()
+    score_testcases()
+    
+    
+def test_magistral():
+    config.settings_default['model_config'] = 'magistral'
     init_testlog()
     score_testcases()
 
@@ -150,6 +152,7 @@ def test_anthropic_regular():
     config.settings_default['model_config'] = 'anthropic'
     init_testlog()
     score_testcases()
+    
     
 def test_anthropic_thinking():
     config.settings_default['model_config'] = 'anthropic_thinking'

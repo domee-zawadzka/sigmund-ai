@@ -67,8 +67,25 @@ a:visited {
     padding: 5px 0px;
 }
 
-.menu .model-buttons {
+.menu .model-buttons,
+.menu .login-buttons {
     margin-bottom: 10px;
+}
+
+.model-buttons-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.model-buttons-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.model-buttons-row button {
+  flex: 1;
 }
 
 .codehilite pre {
@@ -166,7 +183,7 @@ a:visited {
     justify-content: space-between;
     margin-bottom: 10px;
     margin-top: 10px;
-    min-height: 100px;
+    min-height: 120px;
     position: sticky;
     bottom: 0;
     padding: 10px;
@@ -209,6 +226,7 @@ textarea#message:disabled {
     background: none;
 }
 
+button#attach,
 button#cancel,
 button#expand,
 button#send {
@@ -331,6 +349,18 @@ button#start {
     margin-bottom: -10px;
 }
 
+.thinking_block_signature {
+    display: none;
+}
+
+.thinking_block_content {
+    font-family: "Roboto Condensed";
+    font-size: 0.6em;
+    color: #90A4AE;
+    padding-left: 10px;
+    border-left: solid 1px #90A4AE;
+}
+
 .message-workspace,
 .message-timestamp,
 .message-answer-model,
@@ -362,6 +392,16 @@ button#start {
 .message-user {
     margin-left: 10%;
     background-color: #FFFDE7;
+}
+
+.attachment-item {
+	font-family: monospace;
+	color: gray;
+}
+
+.attachment-item button {
+	background: none;
+	border: none;
 }
 
 .hidden-data {
@@ -415,7 +455,8 @@ button#start {
     margin: 10px 0px 10px 0px;
     border: solid 1px #90A4AE;
     border-radius: 4px;
-    padding: 8px;   
+    padding: 8px;
+    background-color: white;
 }
 
 .message .image-generation img {
@@ -427,6 +468,7 @@ button#start {
     margin-bottom: 30px;
 }
 
+.menu small a,
 .menu small {
     font-family: "Roboto Condensed";
     color: #aaa;

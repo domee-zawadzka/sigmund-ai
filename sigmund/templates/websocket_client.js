@@ -18,8 +18,17 @@ function connectWebSocket() {
             // Rebuild conversation history
             let action;
             let message;
+			let workspace;
             socketSendMessage("clear_messages");
             for (let messageDiv of responseDiv.children) {
+				workspace = messageDiv.querySelector('.message-workspace');
+				if (workspace !== null) {
+					workspace_content = messageDiv.querySelector('.workspace-content').textContent;
+					workspace_language = messageDiv.querySelector('.workspace-language').textContent;
+				} else {
+					workspace_content = null;
+					workspace_language = null;
+				}
                 messageDiv = copyAndStripDiv(messageDiv);
                 if (messageDiv.classList.contains('message-ai')) {
                     action = 'ai_message';
@@ -28,7 +37,7 @@ function connectWebSocket() {
                     action = 'user_message';
                     message = messageDiv.textContent;
                 }
-                socketSendMessage(action, message)
+                socketSendMessage(action, message, workspace_content, workspace_language, true);
             }
         };
 
@@ -36,12 +45,53 @@ function connectWebSocket() {
             try {
                 const data = JSON.parse(event.data);
                 if (data.action === 'user_message') {
+                    // Process any attachments
+                    if (data.attachments && data.attachments.length > 0) {
+                        // Convert base64 to File objects
+                        const files = data.attachments.map(att => {
+                            // Decode base64 string to binary
+                            const binary = atob(att.data);
+                            const bytes = new Uint8Array(binary.length);
+                            for (let i = 0; i < binary.length; i++) {
+                                bytes[i] = binary.charCodeAt(i);
+                            }
+                            // Create Blob and File objects
+                            const blob = new Blob([bytes], { type: att.mime_type });
+                            return new File([blob], att.filename, { type: att.mime_type });
+                        });
+                        
+                        // Add to global attachments array
+                        if (typeof attachments !== 'undefined') {
+                            attachments.push(...files);
+                            // Update UI to show attachment count if updateAttachmentDisplay exists
+                            if (typeof updateAttachmentDisplay === 'function') {
+                                updateAttachmentDisplay();
+                            }
+                        }
+                    }
+                    
+                    // Set message and workspace content
                     messageInput.value = data.message;
                     setWorkspace(data.workspace_content, data.workspace_language);
+                    
+                    // Send message (attachments will be included automatically)
                     sendMessage(data.message);
+                    
+                    // Clear message input after sending
+                    messageInput.value = '';
+                    
+                    // Note: attachments should be cleared by sendMessage function
+                    // after successfully sending the message
+                    
+                } else if (data.action === 'connector_name') {
+                    const name = data.message;
+                    document.getElementById('connected-status').innerHTML = ' Connected to ' + name;
+                } else if (data.action === 'disable_code_execution') {
+                    document.getElementById('tool-execute-code').checked = false;
                 }
             } catch (error) {
                 // If the message does not adhere to the expected format, ignore it.
+                console.error('Error processing WebSocket message:', error);
             }
         };
 
@@ -66,12 +116,16 @@ function startReconnect() {
 }
 
 
-function socketSendMessage(action, message, workspace_content, workspace_language) {
+function socketSendMessage(action, message, workspace_content, workspace_language, on_connect) {
+	if (typeof on_connect === 'undefined') {
+		on_connect = false;
+	}
     const data = JSON.stringify({
         action: action,
         message: message,
         workspace_content: workspace_content,
         workspace_language: workspace_language,
+		on_connect: on_connect
     });
     console.log('Sending to server:', data);
     socket.send(data);

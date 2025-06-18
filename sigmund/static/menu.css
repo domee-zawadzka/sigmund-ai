@@ -18,14 +18,20 @@
   border-radius: 4px;
   display: none;
   position: fixed; /* Changed from absolute to fixed */
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   border: 1px solid #ccc;
   background: #fff;
   padding: 10px;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
   z-index: 1000; /* Ensure the menu is above other content */
+}
+
+/* Large screens */
+@media (min-width: 768px) {
+  .menu {
+    left: 40%;
+    top: 50%;
+    transform: translate(-40%, -50%);
+  }
 }
 
 .menu.active {
@@ -137,6 +143,7 @@
 
 
 .mode-buttons,
+.login-buttons,
 .model-buttons {
     padding: 0px!important;
     margin-top: 10px;
@@ -146,6 +153,7 @@
 }
 
 .mode-buttons button,
+.login-buttons button,
 .model-buttons button {
     flex-grow: 1;
     border: none;
@@ -161,12 +169,14 @@
 }
 
 .mode-buttons button.active,
+.login-buttons button.active,
 .model-buttons button.active {
-    background-color: #007BFF; /* Highlight active button */
+    background-color: #00796b; /* Highlight active button */
     color: white;
 }
 
 .mode-buttons button img,
+.login-buttons button img,
 .model-buttons button img {
     width: 40px; /* Size of the icon */
     height: 40px;
@@ -174,13 +184,27 @@
 }
 
 .mode-buttons button span,
+.login-buttons button span,
 .model-buttons button span {
     font-size: 14px; /* Text size */
 }
 
 .mode-buttons button:hover,
+.login-buttons button:hover,
 .model-buttons button:hover {
     background-color: #e0e0e0; /* Hover effect */
+}
+
+#login div {
+  padding: 0px;
+}
+
+/* When the screen is 600px wide or smaller, stack buttons vertically */
+@media (max-width: 600px) {
+    .model-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }
 
 
@@ -214,4 +238,15 @@
   padding: 4px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+.menu #login {
+  display: none;
+}
+
+/* Fix for input width issues */
+.form-group input[type="text"],
+.form-group input[type="password"] {
+    width: 100%;
+    box-sizing: border-box; /* Include padding and border in width calculation */
 }

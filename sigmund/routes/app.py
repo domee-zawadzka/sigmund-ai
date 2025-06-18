@@ -5,10 +5,10 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from flask import redirect, url_for, session, Blueprint
-from flask_login import login_user, login_required, current_user, \
-    logout_user, UserMixin
+from flask_login import login_user, current_user, logout_user, UserMixin
 from .. import config
 from .. import utils
+from .. import process_sigmund_message
 from ..forms import LoginForm
 from ..sigmund import Sigmund
 import logging
@@ -43,7 +43,7 @@ def chat_page():
         delete_button = f'<button class="message-delete" onclick="deleteMessage(\'{message_id}\')"><i class="fas fa-trash"></i></button>'
         if role == 'assistant':
             html_body = utils.md(
-                f'{config.ai_name}: {utils.process_ai_message(message)}')
+                f'{config.ai_name}: {process_sigmund_message.process_ai_message(message)}')
             html_class = 'message-ai'
         else:
             html_body = '<p>' + utils.clean(f'You: {message}', 
@@ -88,9 +88,12 @@ def chat_page():
     if workspace_content is None:
         workspace_content = ''
         workspace_language = 'markdown'
+    username = sigmund.user_id
+    if '(google)::' in username:
+        username = username.split('(google)::')[0] + '(Google)'
     return utils.render('chat.html', message_history=html_content,
                         subscription_required=config.subscription_required,
-                        username=sigmund.user_id,
+                        username=username,
                         settings=json.dumps(settings),
                         workspace_content=workspace_content,
                         workspace_language=workspace_language)
@@ -114,29 +117,17 @@ def login_handler(form, failed=False):
             kdf.derive(password.encode()))
         user = User(username)
         login_user(user)
-        logger.info(f'initializing encryption key')
+        logger.info('initializing encryption key')
         return redirect('/')
-    login_text = Path('sigmund/static/login.md').read_text()
-    if failed:
-        login_text = f'{config.login_failed_message}\n\n{login_text}'
-    logger.info('log-in screen')
-    return utils.render(
-        'login.html', form=form,
-        login_text=utils.md(login_text))
-    
-    
-@app_blueprint.route('/about')
-def about():
-    return utils.render(
-        'info-page.html',
-        content=utils.md(Path('sigmund/static/about.md').read_text()))
-    
-    
-@app_blueprint.route('/user_question_guide')
-def user_questin_guide():
-    return utils.render(
-        'info-page.html',
-        content=utils.md(Path('sigmund/static/user_question_guide.md').read_text()))
+    html_content = utils.render('welcome.html')
+    return utils.render('chat.html', message_history=html_content,
+                        subscription_required=config.subscription_required,
+                        form=form,
+                        need_login=True,
+                        username='unknown friend',
+                        settings='{}',
+                        workspace_content='',
+                        workspace_language='')
     
 
 @app_blueprint.route('/terms')

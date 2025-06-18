@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.12"]
     services:
       # Label used to access the service container
       redis:
@@ -35,5 +35,8 @@ jobs:
           pip install .
           pip install .[test]
       - name: Test with pytest
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}      
         run: |
           pytest tests/cheap
+
